@@ -20642,7 +20642,8 @@ var vault = sqliteTable("vault", {
   // 加密后的密文
   digits: integer2("digits").default(6),
   period: integer2("period").default(30),
-  algorithm: text2("algorithm").default("SHA-1"),
+  type: text2("type").default("totp"),
+  algorithm: text2("algorithm").default("SHA1"),
   createdAt: integer2("created_at").notNull(),
   createdBy: text2("created_by"),
   // 'username' or 'restore'
@@ -21985,7 +21986,8 @@ var vault2 = mysqlTable("vault", {
   secret: longtext("secret").notNull(),
   digits: int("digits").default(6),
   period: int("period").default(30),
-  algorithm: varchar2("algorithm", { length: 20 }).default("SHA-1"),
+  type: varchar2("type", { length: 20 }).default("totp"),
+  algorithm: varchar2("algorithm", { length: 20 }).default("SHA1"),
   createdAt: bigint2("created_at", { mode: "number" }).notNull(),
   createdBy: varchar2("created_by", { length: 255 }),
   updatedAt: bigint2("updated_at", { mode: "number" }),
@@ -22064,7 +22066,8 @@ var vault3 = pgTable("vault", {
   secret: text("secret").notNull(),
   digits: integer("digits").default(6),
   period: integer("period").default(30),
-  algorithm: varchar("algorithm").default("SHA-1"),
+  type: varchar("type").default("totp"),
+  algorithm: varchar("algorithm").default("SHA1"),
   createdAt: bigint("created_at", { mode: "number" }).notNull(),
   createdBy: varchar("created_by"),
   updatedAt: bigint("updated_at", { mode: "number" }),
@@ -46182,7 +46185,8 @@ async function batchInsertVaultItems(dbClient, items, key, createdBy, startSortO
       category: item.category ? sanitizeInput(item.category, 30) : "",
       secret: secretEncrypted,
       // Drizzle schema 字段名
-      algorithm: item.algorithm || "SHA1",
+      type: item.type || "totp",
+      algorithm: (item.type === "steam" ? "SHA1" : item.algorithm || "SHA1").toUpperCase().replace(/-/g, ""),
       digits: item.digits || 6,
       period: item.period || 30,
       sortOrder: startSortOrder > 0 ? startSortOrder + (items.length - index2) : 0,
@@ -46234,57 +46238,56 @@ function parseOTPAuthURI(uri) {
       const secret2 = uri.replace("steam://", "").replace(/[\s=]/g, "").toUpperCase();
       if (!validateBase32Secret(secret2)) return null;
       return {
-        type: "totp",
-        label: "Steam Guard",
+        type: "steam",
+        label: "Steam",
         issuer: "Steam",
-        account: "Steam Guard",
+        account: "Steam",
         secret: secret2,
         digits: 5,
         period: 30,
-        algorithm: "STEAM"
+        algorithm: "SHA1"
       };
     }
     const url = new URL(uri);
     if (url.protocol !== "otpauth:") return null;
-    const type = url.hostname.toLowerCase();
-    if (type !== "totp" && type !== "hotp" && type !== "steam") return null;
+    const typeHeader = url.hostname.toLowerCase();
+    if (typeHeader !== "totp" && typeHeader !== "hotp" && typeHeader !== "steam") return null;
     const params = new URLSearchParams(url.search);
     const secret = params.get("secret");
     if (!validateBase32Secret(secret)) return null;
     const label = decodeURIComponent(url.pathname.substring(1));
     const [issuer, account] = label.includes(":") ? label.split(":", 2) : ["", label];
     const issuerName = sanitizeInput(params.get("issuer") || issuer, 50);
-    const isSteam = type === "steam" || params.get("algorithm")?.toUpperCase() === "STEAM" || params.get("tokenType")?.toUpperCase() === "STEAM" || params.get("issuer")?.toUpperCase() === "STEAM" && params.get("digits") === "5";
-    let algorithm = (params.get("algorithm") || "SHA1").toUpperCase().replace("SHA1", "SHA-1").replace("SHA256", "SHA-256").replace("SHA512", "SHA-512");
-    if (!["SHA-1", "SHA-256", "SHA-512", "STEAM"].includes(algorithm)) {
-      algorithm = "SHA-1";
+    const isSteam = typeHeader === "steam" || params.get("algorithm")?.toUpperCase() === "STEAM" || params.get("tokenType")?.toUpperCase() === "STEAM" || params.get("issuer")?.toUpperCase() === "STEAM" && params.get("digits") === "5";
+    let algorithm = (params.get("algorithm") || "SHA1").toUpperCase().replace(/-/g, "");
+    if (!["SHA1", "SHA256", "SHA512"].includes(algorithm)) {
+      algorithm = "SHA1";
     }
-    const digits = parseInt(params.get("digits") || (isSteam ? "5" : "6"));
-    const period = parseInt(params.get("period") || "30");
-    if (digits < 5 || digits > 8 || period < 15 || period > 300) return null;
+    const digitsVal = parseInt(params.get("digits") || (isSteam ? "5" : "6"));
+    const periodVal = parseInt(params.get("period") || "30");
+    if (digitsVal < 5 || digitsVal > 8 || periodVal < 15 || periodVal > 300) return null;
     return {
-      type: type === "steam" ? "totp" : type,
+      type: isSteam ? "steam" : typeHeader === "steam" ? "totp" : typeHeader,
       label: sanitizeInput(label, 100),
       issuer: issuerName,
       account: sanitizeInput(account || label, 100),
       secret: secret.replace(/[\s=]/g, "").toUpperCase(),
-      algorithm: isSteam ? "STEAM" : algorithm,
-      digits: isSteam ? 5 : digits,
-      period
+      algorithm: isSteam ? "SHA1" : algorithm,
+      digits: isSteam ? 5 : digitsVal,
+      period: periodVal
     };
   } catch {
     return null;
   }
 }
 function buildOTPAuthURI(data) {
-  const { service, account, secret, algorithm = "SHA-1", digits = 6, period = 30 } = data;
+  const { service, account, secret, type = "totp", algorithm = "SHA1", digits = 6, period = 30 } = data;
   const label = encodeURIComponent(`${service}:${account}`);
   const issuer = encodeURIComponent(service);
-  if (algorithm === "STEAM") {
+  if (type === "steam") {
     return `otpauth://steam/${label}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=5`;
   }
-  const algoParam = algorithm.replace("-", "");
-  return `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&algorithm=${algoParam}&digits=${digits}&period=${period}`;
+  return `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&algorithm=${algorithm}&digits=${digits}&period=${period}`;
 }
 
 // src/features/vault/vaultService.ts
@@ -46362,7 +46365,7 @@ var VaultService = class {
     return `${(service || "").toString().trim().toLowerCase()}:${(account || "").toString().trim().toLowerCase()}`;
   }
   async createAccount(userId, data) {
-    let { service, account, category, secret, digits, period, algorithm } = data;
+    let { service, account, category, secret, digits, period, algorithm, type, otpType: legacyOtpType } = data;
     if (!service || !account || !secret || !validateBase32Secret(secret)) {
       throw new AppError("invalid_secret_format", 400);
     }
@@ -46370,6 +46373,8 @@ var VaultService = class {
     if (typeof account === "string" && account.includes(":")) {
       account = account.split(":").pop()?.trim() || account;
     }
+    const otpType = type || legacyOtpType || "totp";
+    const algo = (otpType === "steam" ? "SHA1" : algorithm || "SHA1").toUpperCase().replace(/-/g, "");
     const existing = await this.repository.findByServiceAccountAny(service, account);
     let maxSort;
     if (existing) {
@@ -46380,7 +46385,8 @@ var VaultService = class {
         await this.repository.update(existing.id, {
           category: category || "",
           secret: encryptedSecret2,
-          algorithm: algorithm || "SHA1",
+          algorithm: algo,
+          type: otpType,
           digits: digits || 6,
           period: period || 30,
           sortOrder: maxSort + 1,
@@ -46400,7 +46406,8 @@ var VaultService = class {
       account,
       category: category || "",
       secret: encryptedSecret,
-      algorithm: algorithm || "SHA1",
+      algorithm: algo,
+      type: otpType,
       digits: digits || 6,
       period: period || 30,
       sortOrder: maxSort + 1,
@@ -46413,7 +46420,7 @@ var VaultService = class {
    * 更新账户
    */
   async updateAccount(id, data) {
-    let { service, account, category, secret, digits, period, algorithm } = data;
+    let { service, account, category, secret, digits, period, algorithm, type } = data;
     if (!service || !account) {
       throw new AppError("missing_service_account", 400);
     }
@@ -46439,7 +46446,10 @@ var VaultService = class {
       account,
       secret: encryptedSecret,
       ...data.category !== void 0 && { category: sanitizeInput(category || "", 30) },
-      ...algorithm !== void 0 && { algorithm },
+      ...algorithm !== void 0 && {
+        algorithm: type === "steam" || data.type === "steam" ? "SHA1" : algorithm.toUpperCase().replace(/-/g, "")
+      },
+      ...type !== void 0 && { type },
       ...digits !== void 0 && { digits },
       ...period !== void 0 && { period },
       ...data.sortOrder !== void 0 && { sortOrder: data.sortOrder },
@@ -57994,6 +58004,25 @@ var MIGRATIONS = [
     sqlite: `ALTER TABLE vault ADD COLUMN deleted_at INTEGER; CREATE INDEX IF NOT EXISTS idx_vault_deleted_at ON vault(deleted_at);`,
     mysql: `ALTER TABLE vault ADD COLUMN deleted_at BIGINT; CREATE INDEX idx_vault_deleted_at ON vault(deleted_at);`,
     postgres: `ALTER TABLE vault ADD COLUMN deleted_at BIGINT; CREATE INDEX IF NOT EXISTS idx_vault_deleted_at ON vault(deleted_at);`
+  },
+  {
+    version: 11,
+    name: "add_type_to_vault_and_normalize_algorithms",
+    sqlite: `
+            ALTER TABLE vault ADD COLUMN type TEXT DEFAULT 'totp';
+            UPDATE vault SET type = 'steam', algorithm = 'SHA1' WHERE algorithm = 'STEAM';
+            UPDATE vault SET algorithm = 'SHA1' WHERE algorithm = 'SHA-1';
+        `,
+    mysql: `
+            ALTER TABLE vault ADD COLUMN type VARCHAR(20) DEFAULT 'totp';
+            UPDATE vault SET type = 'steam', algorithm = 'SHA1' WHERE algorithm = 'STEAM';
+            UPDATE vault SET algorithm = 'SHA1' WHERE algorithm = 'SHA-1';
+        `,
+    postgres: `
+            ALTER TABLE vault ADD COLUMN type VARCHAR(20) DEFAULT 'totp';
+            UPDATE vault SET type = 'steam', algorithm = 'SHA1' WHERE algorithm = 'STEAM';
+            UPDATE vault SET algorithm = 'SHA1' WHERE algorithm = 'SHA-1';
+        `
   }
 ];
 async function migrateDatabase(db) {

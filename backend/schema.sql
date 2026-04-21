@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS vault (
     secret TEXT NOT NULL,          -- 加密存储 {encrypted, iv, salt}
     digits INTEGER DEFAULT 6,
     period INTEGER DEFAULT 30,
+    type TEXT DEFAULT 'totp',
     algorithm TEXT DEFAULT 'SHA1',
     created_at INTEGER,
     created_by TEXT,
