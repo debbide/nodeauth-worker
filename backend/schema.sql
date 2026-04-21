@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS vault (
     period INTEGER DEFAULT 30,
     type TEXT DEFAULT 'totp',
     algorithm TEXT DEFAULT 'SHA1',
+    counter INTEGER DEFAULT 0,
     created_at INTEGER,
     created_by TEXT,
     updated_at INTEGER,
