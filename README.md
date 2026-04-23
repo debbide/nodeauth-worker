@@ -5,7 +5,9 @@
 
 中文 | [English](README.EN.md)
 
-支持 Cloudflare Serverless 与 Docker 私有化部署的高安全、轻量级二步验证 (2FA/TOTP) 管理工具
+支持 Cloudflare Serverless 与 Docker 私有化部署的高安全、轻量级二步验证 (2FA/TOTP) 管理工具。
+
+**专为数字资产 (Crypto) 玩家打造，追求极致的绝对安全。**
 
 
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat&logo=cloudflare)](https://workers.cloudflare.com/)
@@ -22,6 +24,7 @@
 
 - [在线演示](https://demo.nodeauth.io)
 - [部署文档](https://wiki.nodeauth.io)
+- [付费代部署 ($9.99)](https://t.me/NodeAuthBot)
 
 ---
 
@@ -38,7 +41,7 @@
 不管是白嫖 Cloudflare 的免费额度，还是部署在自家的 NAS 或小主机上，NodeAuth 都能为你提供**最安全**、最便捷的 2FA 密钥管理体验。
 
 ### 🕊️ 真正的“全方位”部署 (Dual-Mode)
-*   **白嫖党最爱**：一键部署到 Cloudflare Workers，零成本、零维护、全球加速。
+*   **Serverless 云端托管**：一键部署到 Cloudflare Workers，零服务器成本、零维护、全球加速。
 *   **私有云极客**：支持 Docker 部署，数据锁在自家硬盘里，局域网断网也能用。
 
 ### 📱 像原生 App 一样好用 (PWA)

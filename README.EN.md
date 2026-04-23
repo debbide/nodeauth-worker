@@ -6,6 +6,8 @@
 
 **High-security, Lightweight 2FA/TOTP management tool supporting Cloudflare Serverless and Docker on-premise deployment.**
 
+**Tailored for Digital Asset (Crypto) holders who demand extreme, absolute security.**
+
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat&logo=cloudflare)](https://workers.cloudflare.com/)
 [![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/nodeauth/nodeauth-worker)
 [![GitHub Actions](https://img.shields.io/badge/GitHub-Actions-181717?style=flat&logo=github)](https://github.com/nodeauth/nodeauth-worker/actions)
@@ -19,6 +21,7 @@
 
 - [Live Demo](https://demo.nodeauth.io)
 - [Documentation Wiki](https://wiki.nodeauth.io)
+- [Paid Deployment Service ($9.99)](https://t.me/NodeAuthBot)
 
 ---
 
@@ -35,7 +38,7 @@
 Whether you're leveraging Cloudflare's free tier or deploying it on your own NAS/mini PC, NodeAuth provides the **most secure** and convenient 2FA secret management experience.
 
 ### 🕊️ True "Dual-Mode" Deployment
-*   **Serverless Lovers**: One-click deployment to Cloudflare Workers – zero cost, zero maintenance, global acceleration.
+*   **Serverless Cloud Hosting**: One-click deployment to Cloudflare Workers – zero server costs, zero maintenance, global acceleration.
 *   **Self-Hosting Geeks**: Docker support with local data storage. Even if your local network goes down, your codes stay reachable.
 
 ### 📱 Feels Like a Native App (PWA)
